@@ -40,11 +40,22 @@ jobs:
         run: flutter doctor -v
 
       - name: Install dependencies
-        working-directory: ${{ env.PROJECT_DIR }}
+        working-directory: ${ env.PROJECT_DIR }
         run: flutter pub get
 
+      - name: Upload extracted source for repair
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: adsa-sabha-extracted-source
+          path: |
+            build-src/**/lib/
+            build-src/**/pubspec.yaml
+            build-src/**/android/
+          if-no-files-found: error
+
       - name: Build Release APK
-        working-directory: ${{ env.PROJECT_DIR }}
+        working-directory: ${ env.PROJECT_DIR }
         run: flutter build apk --release
 
       - name: Upload APK
