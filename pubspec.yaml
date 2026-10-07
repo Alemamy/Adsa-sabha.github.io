@@ -1,0 +1,30 @@
+name: adsa_sabha
+description: عدسة سبها - منصة حجز وإدارة الإعلانات مع Firebase.
+publish_to: "none"
+version: 2.0.0+2
+
+environment:
+  sdk: ">=3.6.0 <4.0.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  cupertino_icons: ^1.0.8
+  firebase_core: ^4.14.0
+  firebase_auth: ^6.6.0
+  cloud_firestore: ^6.9.0
+  firebase_storage: ^13.5.0
+  firebase_messaging: ^16.6.0
+  image_picker: ^1.2.0
+  intl: ^0.20.2
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/sabha_lens_logo.png
