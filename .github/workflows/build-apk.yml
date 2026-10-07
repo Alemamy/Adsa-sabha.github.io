@@ -40,7 +40,7 @@ jobs:
         run: flutter doctor -v
 
       - name: Install dependencies
-        working-directory: ${ env.PROJECT_DIR }
+        working-directory: ${{ env.PROJECT_DIR }}
         run: flutter pub get
 
       - name: Upload extracted source for repair
