@@ -1,0 +1,32 @@
+plugins {
+    id "com.android.application"
+    id "org.jetbrains.kotlin.android"
+    id "dev.flutter.flutter-gradle-plugin"
+    id "com.google.gms.google-services"
+}
+
+android {
+    namespace = "com.adsa.sabha"
+    compileSdk = flutter.compileSdkVersion
+    ndkVersion = flutter.ndkVersion
+
+    defaultConfig {
+        applicationId = "com.adsa.sabha"
+        minSdk = 23
+        targetSdk = flutter.targetSdkVersion
+        versionCode = 2
+        versionName = "2.0.0"
+    }
+
+    buildTypes {
+        release {
+            // Release mode is enabled. A Play Store upload requires your own
+            // release/upload keystore instead of the temporary debug key.
+            signingConfig = signingConfigs.debug
+        }
+    }
+}
+
+flutter {
+    source = "../.."
+}
