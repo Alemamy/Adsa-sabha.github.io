@@ -11,7 +11,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout
+      - name: Checkout repository
         uses: actions/checkout@v4
 
       - name: Setup Flutter
@@ -20,17 +20,36 @@ jobs:
           channel: stable
           cache: true
 
+      - name: Extract production project
+        run: |
+          rm -rf build-src
+          mkdir -p build-src
+          unzip -q adsa_sabha_production_ready.zip -d build-src
+
+          PROJECT_DIR="$(find "$GITHUB_WORKSPACE/build-src" -name pubspec.yaml -type f -print -quit | xargs -r dirname)"
+          if [ -z "$PROJECT_DIR" ]; then
+            echo "ERROR: pubspec.yaml was not found inside the ZIP."
+            find build-src -maxdepth 3 -type f | head -100
+            exit 1
+          fi
+
+          echo "PROJECT_DIR=$PROJECT_DIR" >> "$GITHUB_ENV"
+          echo "Flutter project: $PROJECT_DIR"
+
       - name: Flutter doctor
         run: flutter doctor -v
 
       - name: Install dependencies
+        working-directory: ${{ env.PROJECT_DIR }}
         run: flutter pub get
 
       - name: Build Release APK
+        working-directory: ${{ env.PROJECT_DIR }}
         run: flutter build apk --release
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: adsa-sabha-release-apk
-          path: build/app/outputs/flutter-apk/app-release.apk
+          path: build-src/**/build/app/outputs/flutter-apk/app-release.apk
+          if-no-files-found: error
