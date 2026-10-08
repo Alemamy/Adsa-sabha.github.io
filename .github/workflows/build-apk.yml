@@ -25,7 +25,7 @@ jobs:
           PROJECT_DIR="$(find "$GITHUB_WORKSPACE/build-src" -name pubspec.yaml -type f -print -quit | xargs -r dirname)"
           if [ -z "$PROJECT_DIR" ]; then exit 1; fi
           echo "PROJECT_DIR=$PROJECT_DIR" >> "$GITHUB_ENV"
-      - name: Repair Flutter source
+      - name: Repair Flutter and Android build
         working-directory: ${{ env.PROJECT_DIR }}
         run: |
           cat > lib/app_theme.dart <<'EOF'
@@ -59,11 +59,16 @@ jobs:
           s=s.replace("...(s.data ?? const <AdItem>[]).map((a) => AdCard(ad: a)),","...(s.data ?? const <AdItem>[]).map((a) => AdCard(ad: a, db: widget.db, profile: widget.profile)),")
           old="class AdCard extends StatelessWidget {\n  final AdItem ad;\n  const AdCard({super.key, required this.ad});"
           new="class AdCard extends StatelessWidget {\n  final AdItem ad;\n  final FirestoreService db;\n  final UserProfile profile;\n  const AdCard({super.key, required this.ad, required this.db, required this.profile});"
-          if old not in s: raise SystemExit("AdCard declaration not found")
-          s=s.replace(old,new)
+          if old in s: s=s.replace(old,new)
           s=s.replace("AdDetailsScreen(ad: ad, db: widget.db, profile: widget.profile)","AdDetailsScreen(ad: ad, db: db, profile: profile)")
           p.write_text(s,encoding='utf-8')
           PY
+          # AndroidX libraries in the current dependency graph require AGP >= 8.9.1.
+          find android -type f \( -name '*.gradle' -o -name '*.gradle.kts' \) -print0 | xargs -0 sed -i 's/com\.android\.tools\.build:gradle:8\.7\.3/com.android.tools.build:gradle:8.9.1/g; s/com\.android\.application:8\.7\.3/com.android.application:8.9.1/g; s/com\.android\.library:8\.7\.3/com.android.library:8.9.1/g'
+          if [ -f android/settings.gradle ]; then sed -i 's/com.android.application" version "8\.7\.3/com.android.application" version "8.9.1/g; s/com.android.library" version "8\.7\.3/com.android.library" version "8.9.1/g' android/settings.gradle; fi
+          if [ -f android/gradle/wrapper/gradle-wrapper.properties ]; then sed -i 's/gradle-8\.9-all\.zip/gradle-8.11-all.zip/g; s/gradle-8\.9-bin\.zip/gradle-8.11-bin.zip/g' android/gradle/wrapper/gradle-wrapper.properties; fi
+          echo "Android build configuration:"
+          grep -R "8\.9\.1\|gradle-8\.11" -n android/settings.gradle android/build.gradle android/gradle/wrapper/gradle-wrapper.properties 2>/dev/null || true
       - name: Flutter doctor
         run: flutter doctor -v
       - name: Install dependencies
