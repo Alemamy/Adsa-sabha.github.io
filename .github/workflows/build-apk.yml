@@ -9,39 +9,27 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
-
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
           flutter-version: 3.35.7
           cache: true
-
       - name: Extract production project
         run: |
           rm -rf build-src
           mkdir -p build-src
           unzip -q adsa_sabha_production_ready.zip -d build-src
-
           PROJECT_DIR="$(find "$GITHUB_WORKSPACE/build-src" -name pubspec.yaml -type f -print -quit | xargs -r dirname)"
-          if [ -z "$PROJECT_DIR" ]; then
-            echo "ERROR: pubspec.yaml was not found inside the ZIP."
-            find build-src -maxdepth 3 -type f | head -100
-            exit 1
-          fi
-
+          if [ -z "$PROJECT_DIR" ]; then exit 1; fi
           echo "PROJECT_DIR=$PROJECT_DIR" >> "$GITHUB_ENV"
-          echo "Flutter project: $PROJECT_DIR"
-
       - name: Repair Flutter source
         working-directory: ${{ env.PROJECT_DIR }}
         run: |
           cat > lib/app_theme.dart <<'EOF'
           import 'package:flutter/material.dart';
-
           class AppTheme {
             static const bg = Color(0xFF050505);
             static const surface = Color(0xFF101419);
@@ -49,36 +37,38 @@ jobs:
             static const gold = Color(0xFFFFC928);
             static const white = Color(0xFFF6F6F6);
             static const muted = Color(0xFF9AA3AD);
-
             static ThemeData get theme => ThemeData(
               brightness: Brightness.dark,
               scaffoldBackgroundColor: bg,
-              colorScheme: ColorScheme.fromSeed(
-                seedColor: gold,
-                brightness: Brightness.dark,
-              ),
+              colorScheme: ColorScheme.fromSeed(seedColor: gold, brightness: Brightness.dark),
               fontFamily: 'Arial',
               useMaterial3: true,
             );
           }
           EOF
-
           python3 - <<'PY'
           from pathlib import Path
-          p = Path('lib/screens.dart')
-          s = p.read_text(encoding='utf-8')
+          p=Path('lib/screens.dart')
+          s=p.read_text(encoding='utf-8')
           if "import 'app_theme.dart';" not in s:
-              s = s.replace("import 'app_config.dart';", "import 'app_config.dart';\nimport 'app_theme.dart';")
-          p.write_text(s, encoding='utf-8')
+              s=s.replace("import 'app_config.dart';","import 'app_config.dart';\nimport 'app_theme.dart';")
+          if "import 'dart:ui' as ui;" not in s:
+              s="import 'dart:ui' as ui;\n"+s
+          s=s.replace("TextDirection.rtl","ui.TextDirection.rtl")
+          s=s.replace("...ads.map((ad) => AdCard(ad: ad)),","...ads.map((ad) => AdCard(ad: ad, db: widget.db, profile: widget.profile)),")
+          s=s.replace("...(s.data ?? const <AdItem>[]).map((a) => AdCard(ad: a)),","...(s.data ?? const <AdItem>[]).map((a) => AdCard(ad: a, db: widget.db, profile: widget.profile)),")
+          old="class AdCard extends StatelessWidget {\n  final AdItem ad;\n  const AdCard({super.key, required this.ad});"
+          new="class AdCard extends StatelessWidget {\n  final AdItem ad;\n  final FirestoreService db;\n  final UserProfile profile;\n  const AdCard({super.key, required this.ad, required this.db, required this.profile});"
+          if old not in s: raise SystemExit("AdCard declaration not found")
+          s=s.replace(old,new)
+          s=s.replace("AdDetailsScreen(ad: ad, db: widget.db, profile: widget.profile)","AdDetailsScreen(ad: ad, db: db, profile: profile)")
+          p.write_text(s,encoding='utf-8')
           PY
-
       - name: Flutter doctor
         run: flutter doctor -v
-
       - name: Install dependencies
         working-directory: ${{ env.PROJECT_DIR }}
         run: flutter pub get
-
       - name: Upload extracted source for repair
         if: always()
         uses: actions/upload-artifact@v4
@@ -89,11 +79,9 @@ jobs:
             build-src/**/pubspec.yaml
             build-src/**/android/
           if-no-files-found: error
-
       - name: Build Release APK
         working-directory: ${{ env.PROJECT_DIR }}
         run: flutter build apk --release
-
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
