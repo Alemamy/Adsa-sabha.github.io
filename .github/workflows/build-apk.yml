@@ -36,6 +36,42 @@ jobs:
           echo "PROJECT_DIR=$PROJECT_DIR" >> "$GITHUB_ENV"
           echo "Flutter project: $PROJECT_DIR"
 
+      - name: Repair Flutter source
+        working-directory: ${{ env.PROJECT_DIR }}
+        run: |
+          cat > lib/app_theme.dart <<'EOF'
+          import 'package:flutter/material.dart';
+
+          class AppTheme {
+            static const bg = Color(0xFF050505);
+            static const surface = Color(0xFF101419);
+            static const surface2 = Color(0xFF171C22);
+            static const gold = Color(0xFFFFC928);
+            static const white = Color(0xFFF6F6F6);
+            static const muted = Color(0xFF9AA3AD);
+
+            static ThemeData get theme => ThemeData(
+              brightness: Brightness.dark,
+              scaffoldBackgroundColor: bg,
+              colorScheme: ColorScheme.fromSeed(
+                seedColor: gold,
+                brightness: Brightness.dark,
+              ),
+              fontFamily: 'Arial',
+              useMaterial3: true,
+            );
+          }
+          EOF
+
+          python3 - <<'PY'
+          from pathlib import Path
+          p = Path('lib/screens.dart')
+          s = p.read_text(encoding='utf-8')
+          if "import 'app_theme.dart';" not in s:
+              s = s.replace("import 'app_config.dart';", "import 'app_config.dart';\nimport 'app_theme.dart';")
+          p.write_text(s, encoding='utf-8')
+          PY
+
       - name: Flutter doctor
         run: flutter doctor -v
 
