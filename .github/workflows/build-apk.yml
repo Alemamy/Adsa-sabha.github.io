@@ -63,12 +63,28 @@ jobs:
           s=s.replace("AdDetailsScreen(ad: ad, db: widget.db, profile: widget.profile)","AdDetailsScreen(ad: ad, db: db, profile: profile)")
           p.write_text(s,encoding='utf-8')
           PY
-          # AndroidX libraries in the current dependency graph require AGP >= 8.9.1.
-          find android -type f \( -name '*.gradle' -o -name '*.gradle.kts' \) -print0 | xargs -0 sed -i 's/com\.android\.tools\.build:gradle:8\.7\.3/com.android.tools.build:gradle:8.9.1/g; s/com\.android\.application:8\.7\.3/com.android.application:8.9.1/g; s/com\.android\.library:8\.7\.3/com.android.library:8.9.1/g'
-          if [ -f android/settings.gradle ]; then sed -i 's/com.android.application" version "8\.7\.3/com.android.application" version "8.9.1/g; s/com.android.library" version "8\.7\.3/com.android.library" version "8.9.1/g' android/settings.gradle; fi
+          # Update Android Gradle and Kotlin plugins to versions required by dependencies.
+          find android -type f \( -name '*.gradle' -o -name '*.gradle.kts' \) -print0 | xargs -0 sed -i 's/com\.android\.tools\.build:gradle:8\.7\.3/com.android.tools.build:gradle:8.9.1/g; s/com\.android\.application:8\.7\.3/com.android.application:8.9.1/g; s/com\.android\.library:8\.7\.3/com.android.library:8.9.1/g; s/org\.jetbrains\.kotlin\.android" version "2\.1\.0/org.jetbrains.kotlin.android" version "2.3.0/g; s/ext\.kotlin_version = .2\.1\.0./ext.kotlin_version = "2.3.0"/g'
+          if [ -f android/settings.gradle ]; then
+            sed -i 's/com.android.application" version "8\.7\.3/com.android.application" version "8.9.1/g; s/com.android.library" version "8\.7\.3/com.android.library" version "8.9.1/g; s/org.jetbrains.kotlin.android" version "2\.1\.0/org.jetbrains.kotlin.android" version "2.3.0/g' android/settings.gradle
+          fi
           if [ -f android/gradle/wrapper/gradle-wrapper.properties ]; then sed -i 's/gradle-8\.9-all\.zip/gradle-8.11-all.zip/g; s/gradle-8\.9-bin\.zip/gradle-8.11-bin.zip/g' android/gradle/wrapper/gradle-wrapper.properties; fi
+          # Replace corrupt placeholder launcher PNGs with valid PNG files at each density.
+          python3 - <<'PY'
+          from pathlib import Path
+          import struct, zlib
+          def png(w,h):
+              def chunk(t,d):
+                  return struct.pack('>I',len(d))+t+d+struct.pack('>I',zlib.crc32(t+d)&0xffffffff)
+              raw=b''.join(b'\x00'+bytes([255,201,40,255])*w for _ in range(h))
+              return b'\x89PNG\r\n\x1a\n'+chunk(b'IHDR',struct.pack('>IIBBBBB',w,h,8,6,0,0,0))+chunk(b'IDAT',zlib.compress(raw))+chunk(b'IEND',b'')
+          for density,size in [('mipmap-mdpi',48),('mipmap-hdpi',72),('mipmap-xhdpi',96),('mipmap-xxhdpi',144),('mipmap-xxxhdpi',192)]:
+              p=Path('android/app/src/main/res')/density/'ic_launcher.png'
+              if p.exists():
+                  p.write_bytes(png(size,size))
+          PY
           echo "Android build configuration:"
-          grep -R "8\.9\.1\|gradle-8\.11" -n android/settings.gradle android/build.gradle android/gradle/wrapper/gradle-wrapper.properties 2>/dev/null || true
+          grep -R "8\.9\.1\|2\.3\.0\|gradle-8\.11" -n android/settings.gradle android/build.gradle android/gradle/wrapper/gradle-wrapper.properties 2>/dev/null || true
       - name: Flutter doctor
         run: flutter doctor -v
       - name: Install dependencies
