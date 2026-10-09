@@ -136,7 +136,8 @@ jobs:
             }
           }
           EOF
-          echo "GRADLE_OPTS=-I $RUNNER_TEMP/force-jvm17.gradle" >> "$GITHUB_ENV"
+          mkdir -p "$HOME/.gradle/init.d"
+          cp "$RUNNER_TEMP/force-jvm17.gradle" "$HOME/.gradle/init.d/force-jvm17.gradle"
       - name: Upload extracted source for repair
         if: always()
         uses: actions/upload-artifact@v4
