@@ -127,7 +127,6 @@ jobs:
             tasks.withType(org.gradle.api.tasks.compile.JavaCompile).configureEach {
               sourceCompatibility = JavaVersion.VERSION_17
               targetCompatibility = JavaVersion.VERSION_17
-              options.release.set(17)
             }
             tasks.configureEach { t ->
               if (t.class.name.contains('KotlinCompile') && t.hasProperty('kotlinOptions')) {
