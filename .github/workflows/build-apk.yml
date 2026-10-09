@@ -69,6 +69,8 @@ jobs:
             sed -i 's/com.android.application" version "8\.7\.3/com.android.application" version "8.9.1/g; s/com.android.library" version "8\.7\.3/com.android.library" version "8.9.1/g; s/org.jetbrains.kotlin.android" version "2\.1\.0/org.jetbrains.kotlin.android" version "2.3.0/g' android/settings.gradle
           fi
           if [ -f android/gradle/wrapper/gradle-wrapper.properties ]; then sed -i 's/gradle-8\.9-all\.zip/gradle-8.11-all.zip/g; s/gradle-8\.9-bin\.zip/gradle-8.11-bin.zip/g' android/gradle/wrapper/gradle-wrapper.properties; fi
+          # Align Java compilation with Kotlin JVM target 17.
+          find android -type f \( -name '*.gradle' -o -name '*.gradle.kts' \) -print0 | xargs -0 sed -i 's/JavaVersion\.VERSION_1_8/JavaVersion.VERSION_17/g; s/JavaVersion\.VERSION_8/JavaVersion.VERSION_17/g; s/jvmTarget = "1\.8"/jvmTarget = "17"/g; s/jvmTarget = '\''1\.8'\''/jvmTarget = '\''17'\''/g'
           # Replace corrupt placeholder launcher PNGs with valid PNG files at each density.
           python3 - <<'PY'
           from pathlib import Path
