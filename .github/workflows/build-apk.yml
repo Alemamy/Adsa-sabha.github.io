@@ -120,6 +120,23 @@ jobs:
           PY
           echo "JVM target settings:"
           grep -n -E "sourceCompatibility|targetCompatibility|jvmTarget" android/app/build.gradle android/app/build.gradle.kts 2>/dev/null || true
+      - name: Force Gradle Java and Kotlin target to 17
+        run: |
+          cat > "$RUNNER_TEMP/force-jvm17.gradle" <<'EOF'
+          allprojects {
+            tasks.withType(org.gradle.api.tasks.compile.JavaCompile).configureEach {
+              sourceCompatibility = JavaVersion.VERSION_17
+              targetCompatibility = JavaVersion.VERSION_17
+              options.release.set(17)
+            }
+            tasks.configureEach { t ->
+              if (t.class.name.contains('KotlinCompile') && t.hasProperty('kotlinOptions')) {
+                t.kotlinOptions.jvmTarget = '17'
+              }
+            }
+          }
+          EOF
+          echo "GRADLE_OPTS=-I $RUNNER_TEMP/force-jvm17.gradle" >> "$GITHUB_ENV"
       - name: Upload extracted source for repair
         if: always()
         uses: actions/upload-artifact@v4
