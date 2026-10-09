@@ -92,6 +92,34 @@ jobs:
       - name: Install dependencies
         working-directory: ${{ env.PROJECT_DIR }}
         run: flutter pub get
+      - name: Enforce Java and Kotlin JVM 17 targets
+        working-directory: ${{ env.PROJECT_DIR }}
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+          candidates = [Path('android/app/build.gradle'), Path('android/app/build.gradle.kts')]
+          for p in candidates:
+              if not p.exists():
+                  continue
+              s = p.read_text()
+              s = s.replace('JavaVersion.VERSION_1_8', 'JavaVersion.VERSION_17')
+              s = s.replace('JavaVersion.VERSION_8', 'JavaVersion.VERSION_17')
+              s = s.replace('JavaVersion.VERSION_1_8', 'JavaVersion.VERSION_17')
+              s = re.sub(r"(jvmTarget\\s*=\\s*['\"])1\\.8(['\"])", r"\\g<1>17\\g<2>", s)
+              if 'compileOptions' not in s:
+                  s = re.sub(r'android\\s*\\{', 'android {\\n    compileOptions {\\n        sourceCompatibility JavaVersion.VERSION_17\\n        targetCompatibility JavaVersion.VERSION_17\\n    }', s, count=1)
+              elif 'sourceCompatibility JavaVersion.VERSION_17' not in s and 'sourceCompatibility = JavaVersion.VERSION_17' not in s:
+                  s = re.sub(r'compileOptions\\s*\\{', 'compileOptions {\\n        sourceCompatibility JavaVersion.VERSION_17\\n        targetCompatibility JavaVersion.VERSION_17', s, count=1)
+              if 'kotlinOptions' in s:
+                  s = re.sub(r'kotlinOptions\\s*\\{[^}]*\\}', "kotlinOptions {\\n        jvmTarget = '17'\\n    }", s, count=1, flags=re.S)
+              else:
+                  s = re.sub(r'android\\s*\\{', "android {\\n    kotlinOptions { jvmTarget = '17' }", s, count=1)
+              p.write_text(s)
+              print(f'Patched {p}')
+          PY
+          echo "JVM target settings:"
+          grep -n -E "sourceCompatibility|targetCompatibility|jvmTarget" android/app/build.gradle android/app/build.gradle.kts 2>/dev/null || true
       - name: Upload extracted source for repair
         if: always()
         uses: actions/upload-artifact@v4
